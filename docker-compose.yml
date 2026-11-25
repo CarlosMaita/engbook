@@ -1,0 +1,17 @@
+services:
+  engbook:
+    build: .
+    container_name: engbook
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_PATH=/data/engbook.db
+      - JWT_SECRET=${JWT_SECRET:-cambia-este-secreto-en-produccion}
+    volumes:
+      - engbook_data:/data
+
+volumes:
+  engbook_data:
