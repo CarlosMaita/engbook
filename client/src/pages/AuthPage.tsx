@@ -1,9 +1,10 @@
-import { BookOpen, Flame, Sparkles } from 'lucide-react';
+import { BookOpen, Eye, Flame, Sparkles } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
+import { InstallPwaBanner } from '../components/InstallPwaBanner';
 import { useAuth } from '../context/AuthContext';
 
 export function AuthPage() {
-  const { login, register } = useAuth();
+  const { login, register, enterDemo } = useAuth();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -30,8 +31,10 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+      <InstallPwaBanner />
+      <div className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="w-full max-w-md space-y-6">
         <div className="text-center space-y-3">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-xl shadow-amber-500/20">
             <BookOpen className="w-7 h-7 text-slate-950 stroke-[2.5]" />
@@ -162,6 +165,23 @@ export function AuthPage() {
                 : 'Comenzar mi racha'}
             </button>
           </form>
+
+          <div className="relative flex items-center justify-center">
+            <div className="border-t border-slate-800 w-full" />
+            <span className="bg-slate-900 px-3 text-[11px] text-slate-500 uppercase tracking-wider shrink-0">
+              o explora primero
+            </span>
+            <div className="border-t border-slate-800 w-full" />
+          </div>
+
+          <button
+            type="button"
+            onClick={enterDemo}
+            className="w-full py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-slate-100 font-semibold text-sm flex items-center justify-center gap-2 transition"
+          >
+            <Eye className="w-4 h-4 text-amber-400" />
+            Ver Demo sin registrarse
+          </button>
         </div>
 
         <div className="flex items-center justify-center gap-6 text-xs text-slate-500">
@@ -173,6 +193,7 @@ export function AuthPage() {
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
             Flashcards SRS
           </span>
+        </div>
         </div>
       </div>
     </div>

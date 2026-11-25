@@ -7,6 +7,7 @@ import type {
   Word,
 } from '../types';
 import { getLocalDateString } from './date';
+import { demoStore } from './demoData';
 import {
   cacheOverview,
   cacheWords,
@@ -18,6 +19,21 @@ import {
 } from './offlineSync';
 
 const TOKEN_KEY = 'engbook_token';
+const DEMO_KEY = 'engbook_demo_mode';
+
+export function isDemoMode(): boolean {
+  return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DEMO_KEY) === '1';
+}
+
+export function setDemoMode(enabled: boolean): void {
+  if (typeof sessionStorage === 'undefined') return;
+  if (enabled) {
+    demoStore.reset();
+    sessionStorage.setItem(DEMO_KEY, '1');
+  } else {
+    sessionStorage.removeItem(DEMO_KEY);
+  }
+}
 
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -81,6 +97,9 @@ export const api = {
     name?: string;
     dailyGoal?: number;
   }): Promise<{ user: User }> {
+    if (isDemoMode()) {
+      return { user: demoStore.updateSettings(body) };
+    }
     return request('/api/auth/settings', {
       method: 'PATCH',
       body: JSON.stringify({ ...body, localDate: getLocalDateString() }),
@@ -88,6 +107,9 @@ export const api = {
   },
 
   async getWords(params?: { search?: string; status?: string }): Promise<Word[]> {
+    if (isDemoMode()) {
+      return demoStore.getWords();
+    }
     const query = new URLSearchParams();
     if (params?.search) query.set('search', params.search);
     if (params?.status && params.status !== 'all') query.set('status', params.status);
@@ -108,6 +130,9 @@ export const api = {
   },
 
   async getDueWords(): Promise<Word[]> {
+    if (isDemoMode()) {
+      return demoStore.getDueWords();
+    }
     try {
       const data = await request<{ dueWords: Word[] }>('/api/words/due');
       return data.dueWords;
@@ -126,6 +151,9 @@ export const api = {
     example: string;
     notes: string;
   }): Promise<{ word?: Word; queued?: boolean }> {
+    if (isDemoMode()) {
+      return { word: demoStore.createWord(body) };
+    }
     const localDate = getLocalDateString();
     if (!navigator.onLine) {
       await enqueueMutation({
@@ -155,6 +183,9 @@ export const api = {
     id: string,
     body: { term?: string; translation?: string; example?: string; notes?: string }
   ): Promise<{ word: Word }> {
+    if (isDemoMode()) {
+      return { word: demoStore.updateWord(id, body) };
+    }
     return request(`/api/words/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(body),
@@ -162,6 +193,10 @@ export const api = {
   },
 
   async deleteWord(id: string): Promise<void> {
+    if (isDemoMode()) {
+      demoStore.deleteWord(id);
+      return;
+    }
     await request(`/api/words/${id}`, { method: 'DELETE' });
   },
 
@@ -169,6 +204,9 @@ export const api = {
     wordId: string,
     quality: ReviewQuality
   ): Promise<{ word?: Word; queued?: boolean }> {
+    if (isDemoMode()) {
+      return { word: demoStore.reviewWord(wordId, quality) };
+    }
     const localDate = getLocalDateString();
     if (!navigator.onLine) {
       await enqueueMutation({
@@ -195,6 +233,9 @@ export const api = {
   },
 
   async getOverview(): Promise<StatsOverview> {
+    if (isDemoMode()) {
+      return demoStore.getOverview();
+    }
     const today = getLocalDateString();
     try {
       const data = await request<StatsOverview>(`/api/stats/overview?today=${today}`);
@@ -210,17 +251,23 @@ export const api = {
   },
 
   async getHeatmap(days = 365): Promise<{ cells: HeatmapCell[] }> {
+    if (isDemoMode()) {
+      return demoStore.getHeatmap(days);
+    }
     const today = getLocalDateString();
     return request(`/api/stats/heatmap?today=${today}&days=${days}`);
   },
 
   async getWeekly(days = 14): Promise<{ series: WeeklyPoint[] }> {
+    if (isDemoMode()) {
+      return demoStore.getWeekly(days);
+    }
     const today = getLocalDateString();
     return request(`/api/stats/weekly?today=${today}&days=${days}`);
   },
 
   async syncPendingQueue(): Promise<number> {
-    if (!navigator.onLine) return 0;
+    if (isDemoMode() || !navigator.onLine) return 0;
     const items = await getPendingMutations();
     let synced = 0;
     for (const item of items) {

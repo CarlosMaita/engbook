@@ -2,13 +2,16 @@ import {
   BarChart3,
   BookOpen,
   Download,
+  Eye,
   Flame,
   Home,
   Layers,
   WifiOff,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { api } from '../lib/api';
+import { InstallPwaBanner } from './InstallPwaBanner';
 
 export type TabKey = 'dashboard' | 'words' | 'review' | 'stats';
 
@@ -41,6 +44,7 @@ export function Layout({
   onSynced,
   children,
 }: LayoutProps) {
+  const { isDemo, logout } = useAuth();
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
@@ -171,6 +175,22 @@ export function Layout({
 
       {/* Main Content */}
       <main className="flex-1 md:pl-64 pb-24 md:pb-10">
+        <InstallPwaBanner />
+        {isDemo && (
+          <div className="bg-sky-500/15 border-b border-sky-500/30 px-4 py-2 text-xs text-sky-200 flex flex-wrap items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5 text-sky-400" />
+              <strong>Modo Demo</strong> — Estás probando datos de ejemplo (no se guardan al salir).
+            </span>
+            <button
+              type="button"
+              onClick={logout}
+              className="px-2.5 py-0.5 rounded-md bg-sky-400 hover:bg-sky-300 text-slate-950 font-bold transition"
+            >
+              Crear mi cuenta
+            </button>
+          </div>
+        )}
         {!isOnline && (
           <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2 text-xs text-amber-200 flex items-center justify-center gap-2">
             <WifiOff className="w-3.5 h-3.5" />
