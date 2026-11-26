@@ -25,6 +25,15 @@ export function createApp({ db, staticDir }: CreateAppOptions) {
   app.use(cors());
   app.use(express.json({ limit: '1mb' }));
 
+  // Prevent search engine indexation across all routes and static assets
+  app.use((_req, res, next) => {
+    res.setHeader(
+      'X-Robots-Tag',
+      'noindex, nofollow, noarchive, nosnippet, noimageindex'
+    );
+    next();
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', service: 'engbook-api' });
   });

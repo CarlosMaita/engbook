@@ -126,5 +126,11 @@ describe('EngBook API Integration', () => {
     expect(promoted.body.promotedFromInbox).toBe(true);
     expect(promoted.body.word.status).toBe('new');
     expect(promoted.body.word.isDue).toBe(true);
+
+    // Verify anti-indexation header is sent on responses
+    const health = await request(app).get('/api/health').expect(200);
+    expect(health.headers['x-robots-tag']).toBe(
+      'noindex, nofollow, noarchive, nosnippet, noimageindex'
+    );
   });
 });
