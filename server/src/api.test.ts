@@ -97,5 +97,34 @@ describe('EngBook API Integration', () => {
     expect(weekly.body.series).toHaveLength(7);
     expect(weekly.body.series[6].wordsAdded).toBe(1);
     expect(weekly.body.series[6].reviewsDone).toBe(1);
+
+    // Quick capture (inbox word without translation) does not enter due queue until defined
+    const captured = await request(app)
+      .post('/api/words')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({
+        term: 'Ubiquitous',
+        notes: 'YouTube video',
+        localDate: '2026-11-25',
+      })
+      .expect(201);
+    expect(captured.body.word.status).toBe('inbox');
+    expect(captured.body.word.isDue).toBe(false);
+
+    const dueBefore = await request(app)
+      .get('/api/words/due')
+      .set('Authorization', `Bearer ${tokenA}`)
+      .expect(200);
+    expect(dueBefore.body.dueWords).toHaveLength(0);
+
+    // Defining its meaning promotes it from inbox into due queue & counts daily action
+    const promoted = await request(app)
+      .patch(`/api/words/${captured.body.word.id}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ translation: 'Omnipresente', localDate: '2026-11-25' })
+      .expect(200);
+    expect(promoted.body.promotedFromInbox).toBe(true);
+    expect(promoted.body.word.status).toBe('new');
+    expect(promoted.body.word.isDue).toBe(true);
   });
 });

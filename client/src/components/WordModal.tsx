@@ -1,4 +1,4 @@
-import { X } from 'lucide-react';
+import { ExternalLink, X } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import type { Word } from '../types';
 
@@ -14,6 +14,7 @@ interface WordModalProps {
 }
 
 export function WordModal({ initialWord, onClose, onSave }: WordModalProps) {
+  const isInbox = initialWord?.status === 'inbox';
   const [term, setTerm] = useState(initialWord?.term ?? '');
   const [translation, setTranslation] = useState(initialWord?.translation ?? '');
   const [example, setExample] = useState(initialWord?.example ?? '');
@@ -49,7 +50,11 @@ export function WordModal({ initialWord, onClose, onSave }: WordModalProps) {
       <div className="w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
           <h2 className="text-base font-semibold">
-            {initialWord ? 'Editar palabra' : 'Nueva palabra en inglés'}
+            {isInbox
+              ? 'Definir significado'
+              : initialWord
+              ? 'Editar palabra'
+              : 'Nueva palabra en inglés'}
           </h2>
           <button
             onClick={onClose}
@@ -67,12 +72,38 @@ export function WordModal({ initialWord, onClose, onSave }: WordModalProps) {
           )}
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
-              Palabra o expresión (Inglés) *
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-medium text-slate-300">
+                Palabra o expresión (Inglés) *
+              </label>
+              {term.trim() && (
+                <div className="flex items-center gap-2 text-[11px]">
+                  <a
+                    href={`https://translate.google.com/?sl=en&tl=es&text=${encodeURIComponent(
+                      term.trim()
+                    )}&op=translate`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-sky-400 hover:text-sky-300"
+                  >
+                    Traductor <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <a
+                    href={`https://dictionary.cambridge.org/dictionary/english-spanish/${encodeURIComponent(
+                      term.trim().toLowerCase().replace(/\s+/g, '-')
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-violet-400 hover:text-violet-300"
+                  >
+                    Cambridge <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
+            </div>
             <input
               type="text"
-              autoFocus
+              autoFocus={!isInbox}
               value={term}
               onChange={(e) => setTerm(e.target.value)}
               placeholder="Ej. Breakthrough, To figure out..."
@@ -86,6 +117,7 @@ export function WordModal({ initialWord, onClose, onSave }: WordModalProps) {
             </label>
             <input
               type="text"
+              autoFocus={isInbox}
               value={translation}
               onChange={(e) => setTranslation(e.target.value)}
               placeholder="Ej. Avance importante, Descubrir / resolver"
@@ -132,7 +164,13 @@ export function WordModal({ initialWord, onClose, onSave }: WordModalProps) {
               disabled={saving}
               className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-amber-500 hover:bg-amber-400 text-slate-950 disabled:opacity-50 transition"
             >
-              {saving ? 'Guardando...' : initialWord ? 'Guardar cambios' : 'Agregar (+1 hoy)'}
+              {saving
+                ? 'Guardando...'
+                : isInbox
+                ? 'Guardar y aprender (+1 hoy)'
+                : initialWord
+                ? 'Guardar cambios'
+                : 'Agregar (+1 hoy)'}
             </button>
           </div>
         </form>

@@ -188,7 +188,7 @@ export const api = {
     }
     return request(`/api/words/${id}`, {
       method: 'PATCH',
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, localDate: getLocalDateString() }),
     });
   },
 

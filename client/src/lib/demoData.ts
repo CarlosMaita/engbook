@@ -111,11 +111,27 @@ class DemoStore {
       createdAt: new Date(now - 5 * dayMs).toISOString(),
       updatedAt: new Date(now - dayMs).toISOString(),
       status: opts.status,
-      isDue: opts.dueOffsetDays <= 0,
+      isDue: opts.status !== 'inbox' && opts.dueOffsetDays <= 0,
       intervalPreview: { 1: 1, 2: Math.max(1, Math.round(opts.interval * 1.2) || 1), 3: opts.reps === 0 ? 1 : opts.reps === 1 ? 6 : Math.max(15, Math.round(opts.interval * 2.5)), 4: opts.reps === 0 ? 4 : Math.max(8, Math.round(opts.interval * 3.2)) },
     });
 
     this.words = [
+      mkWord(
+        'demo-inbox-1',
+        'Ubiquitous',
+        '',
+        '',
+        'Video de YouTube sobre IA',
+        { reps: 0, interval: 0, dueOffsetDays: 0, status: 'inbox' }
+      ),
+      mkWord(
+        'demo-inbox-2',
+        'Take for granted',
+        '',
+        '',
+        'Podcast de tecnología',
+        { reps: 0, interval: 0, dueOffsetDays: 0, status: 'inbox' }
+      ),
       mkWord(
         'demo-1',
         'Breakthrough',
@@ -205,6 +221,7 @@ class DemoStore {
 
   createWord(body: { term: string; translation: string; example: string; notes: string }): Word {
     const nowIso = new Date().toISOString();
+    const isInbox = body.translation.trim().length === 0;
     const word: Word = {
       id: `demo-${Date.now()}`,
       term: body.term,
@@ -217,12 +234,14 @@ class DemoStore {
       nextReviewAt: nowIso,
       createdAt: nowIso,
       updatedAt: nowIso,
-      status: 'new',
-      isDue: true,
+      status: isInbox ? 'inbox' : 'new',
+      isDue: !isInbox,
       intervalPreview: { 1: 1, 2: 1, 3: 1, 4: 4 },
     };
     this.words = [word, ...this.words];
-    this.bumpToday('add');
+    if (!isInbox) {
+      this.bumpToday('add');
+    }
     return word;
   }
 
@@ -232,12 +251,21 @@ class DemoStore {
   ): Word {
     const idx = this.words.findIndex((w) => w.id === id);
     if (idx === -1) throw new Error('Palabra no encontrada');
+    const prev = this.words[idx];
+    const nextTranslation = body.translation ?? prev.translation;
+    const promoted = prev.status === 'inbox' && nextTranslation.trim().length > 0;
     const updated: Word = {
-      ...this.words[idx],
+      ...prev,
       ...body,
+      translation: nextTranslation,
+      status: promoted ? 'new' : nextTranslation.trim().length === 0 ? 'inbox' : prev.status,
+      isDue: promoted ? true : prev.isDue,
       updatedAt: new Date().toISOString(),
     };
     this.words[idx] = updated;
+    if (promoted) {
+      this.bumpToday('add');
+    }
     return updated;
   }
 
@@ -314,8 +342,10 @@ class DemoStore {
       };
     });
 
-    const masteredWords = this.words.filter((w) => w.status === 'mastered').length;
-    const dueCount = this.words.filter((w) => w.isDue).length;
+    const activeWords = this.words.filter((w) => w.status !== 'inbox');
+    const inboxWords = this.words.length - activeWords.length;
+    const masteredWords = activeWords.filter((w) => w.status === 'mastered').length;
+    const dueCount = activeWords.filter((w) => w.isDue).length;
 
     return {
       today,
@@ -335,9 +365,10 @@ class DemoStore {
         totalCompletedDays: completedDates.length,
       },
       totals: {
-        totalWords: this.words.length,
+        totalWords: activeWords.length,
+        inboxWords,
         masteredWords,
-        learningWords: this.words.length - masteredWords,
+        learningWords: activeWords.length - masteredWords,
         dueCount,
         totalReviews: this.totalReviews,
       },

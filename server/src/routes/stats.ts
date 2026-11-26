@@ -26,17 +26,26 @@ export function createStatsRouter(db: AppDatabase): Router {
     const dailyGoal = user?.daily_goal ?? 5;
 
     const words = db
-      .prepare('SELECT repetitions, interval_days, next_review_at FROM words WHERE user_id = ?')
+      .prepare(
+        'SELECT translation, repetitions, interval_days, next_review_at FROM words WHERE user_id = ?'
+      )
       .all(userId) as unknown as Array<{
+      translation: string;
       repetitions: number;
       interval_days: number;
       next_review_at: string;
     }>;
 
-    const totalWords = words.length;
+    let totalWords = 0;
+    let inboxWords = 0;
     let masteredWords = 0;
     let dueCount = 0;
     for (const w of words) {
+      if (w.translation.trim().length === 0) {
+        inboxWords += 1;
+        continue;
+      }
+      totalWords += 1;
       if (isWordMastered(w.repetitions, w.interval_days)) masteredWords += 1;
       if (w.next_review_at <= nowIso) dueCount += 1;
     }
@@ -98,6 +107,7 @@ export function createStatsRouter(db: AppDatabase): Router {
       streak,
       totals: {
         totalWords,
+        inboxWords,
         masteredWords,
         learningWords: totalWords - masteredWords,
         dueCount,

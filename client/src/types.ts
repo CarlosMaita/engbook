@@ -20,7 +20,7 @@ export interface Word {
   nextReviewAt: string;
   createdAt: string;
   updatedAt: string;
-  status: 'new' | 'learning' | 'mastered';
+  status: 'inbox' | 'new' | 'learning' | 'mastered';
   isDue: boolean;
   intervalPreview: Record<ReviewQuality, number>;
 }
@@ -44,6 +44,7 @@ export interface StatsOverview {
   };
   totals: {
     totalWords: number;
+    inboxWords?: number;
     masteredWords: number;
     learningWords: number;
     dueCount: number;

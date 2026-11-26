@@ -7,6 +7,7 @@ import {
   Plus,
   Trophy,
 } from 'lucide-react';
+import { QuickCaptureBar } from '../components/QuickCaptureBar';
 import { useAuth } from '../context/AuthContext';
 import { formatShortDay } from '../lib/date';
 import type { StatsOverview } from '../types';
@@ -16,6 +17,8 @@ interface DashboardPageProps {
   loading: boolean;
   onOpenAddWord: () => void;
   onStartReview: () => void;
+  onQuickCapture: (term: string, source: string) => Promise<void>;
+  onOpenInbox: () => void;
 }
 
 export function DashboardPage({
@@ -23,6 +26,8 @@ export function DashboardPage({
   loading,
   onOpenAddWord,
   onStartReview,
+  onQuickCapture,
+  onOpenInbox,
 }: DashboardPageProps) {
   const { user } = useAuth();
 
@@ -67,6 +72,13 @@ export function DashboardPage({
           Agregar palabra
         </button>
       </div>
+
+      {/* Quick Capture Bar */}
+      <QuickCaptureBar
+        onCapture={onQuickCapture}
+        inboxCount={totals?.inboxWords ?? 0}
+        onViewInbox={onOpenInbox}
+      />
 
       {/* Streak & Daily Progress Hero */}
       <div className="rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800/80 border border-slate-800 p-6 flex flex-col sm:flex-row items-center gap-6">

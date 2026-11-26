@@ -28,7 +28,7 @@ interface WordRow {
 
 const createWordSchema = z.object({
   term: z.string().trim().min(1, 'La palabra en inglés es obligatoria').max(120),
-  translation: z.string().trim().min(1, 'La traducción es obligatoria').max(200),
+  translation: z.string().trim().max(200).optional().default(''),
   example: z.string().trim().max(400).optional().default(''),
   notes: z.string().trim().max(500).optional().default(''),
   localDate: z.string().optional(),
@@ -36,9 +36,10 @@ const createWordSchema = z.object({
 
 const updateWordSchema = z.object({
   term: z.string().trim().min(1).max(120).optional(),
-  translation: z.string().trim().min(1).max(200).optional(),
+  translation: z.string().trim().max(200).optional(),
   example: z.string().trim().max(400).optional(),
   notes: z.string().trim().max(500).optional(),
+  localDate: z.string().optional(),
 });
 
 const reviewSchema = z.object({
@@ -47,8 +48,9 @@ const reviewSchema = z.object({
 });
 
 function serializeWord(row: WordRow, nowIso: string) {
-  const mastered = isWordMastered(row.repetitions, row.interval_days);
-  const isDue = row.next_review_at <= nowIso;
+  const isInbox = row.translation.trim().length === 0;
+  const mastered = !isInbox && isWordMastered(row.repetitions, row.interval_days);
+  const isDue = !isInbox && row.next_review_at <= nowIso;
   return {
     id: row.id,
     term: row.term,
@@ -61,7 +63,13 @@ function serializeWord(row: WordRow, nowIso: string) {
     nextReviewAt: row.next_review_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    status: mastered ? 'mastered' : row.repetitions > 0 ? 'learning' : 'new',
+    status: isInbox
+      ? 'inbox'
+      : mastered
+      ? 'mastered'
+      : row.repetitions > 0
+      ? 'learning'
+      : 'new',
     isDue,
     intervalPreview: previewIntervals({
       repetitions: row.repetitions,
@@ -92,9 +100,10 @@ export function createWordsRouter(db: AppDatabase): Router {
           const hay = `${w.term} ${w.translation} ${w.example} ${w.notes}`.toLowerCase();
           if (!hay.includes(search)) return false;
         }
+        if (status === 'inbox') return w.status === 'inbox';
         if (status === 'due') return w.isDue;
         if (status === 'mastered') return w.status === 'mastered';
-        if (status === 'learning') return w.status !== 'mastered';
+        if (status === 'learning') return w.status !== 'mastered' && w.status !== 'inbox';
         return true;
       });
 
@@ -109,7 +118,7 @@ export function createWordsRouter(db: AppDatabase): Router {
     const rows = db
       .prepare(
         `SELECT * FROM words
-         WHERE user_id = ? AND next_review_at <= ?
+         WHERE user_id = ? AND TRIM(translation) != '' AND next_review_at <= ?
          ORDER BY next_review_at ASC
          LIMIT ?`
       )
@@ -139,18 +148,23 @@ export function createWordsRouter(db: AppDatabase): Router {
        ) VALUES (?, ?, ?, ?, ?, ?, 2.5, 0, 0, ?, ?, ?)`
     ).run(id, userId, term, translation, example, notes, nowIso, nowIso, nowIso);
 
-    const activity = recordDailyAction(db, userId, normalizeLocalDate(localDate), 'add');
+    const isInbox = translation.trim().length === 0;
+    const activity = isInbox
+      ? null
+      : recordDailyAction(db, userId, normalizeLocalDate(localDate), 'add');
     const created = db.prepare('SELECT * FROM words WHERE id = ?').get(id) as unknown as WordRow;
 
     res.status(201).json({
       word: serializeWord(created, nowIso),
-      dailyActivity: {
-        date: activity.activity_date,
-        wordsAdded: activity.words_added,
-        reviewsDone: activity.reviews_done,
-        goalTarget: activity.goal_target,
-        goalCompleted: activity.goal_completed === 1,
-      },
+      dailyActivity: activity
+        ? {
+            date: activity.activity_date,
+            wordsAdded: activity.words_added,
+            reviewsDone: activity.reviews_done,
+            goalTarget: activity.goal_target,
+            goalCompleted: activity.goal_completed === 1,
+          }
+        : null,
     });
   });
 
@@ -173,22 +187,43 @@ export function createWordsRouter(db: AppDatabase): Router {
     }
 
     const nowIso = new Date().toISOString();
+    const nextTranslation = parsed.data.translation ?? existing.translation;
+    const promotedFromInbox =
+      existing.translation.trim().length === 0 && nextTranslation.trim().length > 0;
+
     db.prepare(
       `UPDATE words
-       SET term = ?, translation = ?, example = ?, notes = ?, updated_at = ?
+       SET term = ?, translation = ?, example = ?, notes = ?, next_review_at = ?, updated_at = ?
        WHERE id = ? AND user_id = ?`
     ).run(
       parsed.data.term ?? existing.term,
-      parsed.data.translation ?? existing.translation,
+      nextTranslation,
       parsed.data.example ?? existing.example,
       parsed.data.notes ?? existing.notes,
+      promotedFromInbox ? nowIso : existing.next_review_at,
       nowIso,
       wordId,
       userId
     );
 
+    const activity = promotedFromInbox
+      ? recordDailyAction(db, userId, normalizeLocalDate(parsed.data.localDate), 'add')
+      : null;
+
     const updated = db.prepare('SELECT * FROM words WHERE id = ?').get(wordId) as unknown as WordRow;
-    res.json({ word: serializeWord(updated, nowIso) });
+    res.json({
+      word: serializeWord(updated, nowIso),
+      promotedFromInbox,
+      dailyActivity: activity
+        ? {
+            date: activity.activity_date,
+            wordsAdded: activity.words_added,
+            reviewsDone: activity.reviews_done,
+            goalTarget: activity.goal_target,
+            goalCompleted: activity.goal_completed === 1,
+          }
+        : null,
+    });
   });
 
   router.delete('/:id', (req: AuthenticatedRequest, res) => {
