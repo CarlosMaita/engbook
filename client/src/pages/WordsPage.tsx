@@ -20,7 +20,7 @@ interface WordsPageProps {
   loading: boolean;
   initialFilter?: WordFilterKey;
   onAdd: () => void;
-  onQuickCapture: (term: string, source: string) => Promise<void>;
+  onQuickCapture: (term: string, source: string, translation?: string) => Promise<void>;
   onEdit: (word: Word) => void;
   onDelete: (word: Word) => Promise<void>;
 }

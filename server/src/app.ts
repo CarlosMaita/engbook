@@ -6,6 +6,7 @@ import path from 'node:path';
 import type { AppDatabase } from './db';
 import { createAuthRouter } from './routes/auth';
 import { createStatsRouter } from './routes/stats';
+import { createTranslateRouter } from './routes/translate';
 import { createWordsRouter } from './routes/words';
 
 export interface CreateAppOptions {
@@ -31,6 +32,7 @@ export function createApp({ db, staticDir }: CreateAppOptions) {
   app.use('/api/auth', createAuthRouter(db));
   app.use('/api/words', createWordsRouter(db));
   app.use('/api/stats', createStatsRouter(db));
+  app.use('/api/translate', createTranslateRouter());
 
   if (staticDir && fs.existsSync(staticDir)) {
     app.use(express.static(staticDir));

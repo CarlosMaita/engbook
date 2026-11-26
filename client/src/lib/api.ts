@@ -266,6 +266,10 @@ export const api = {
     return request(`/api/stats/weekly?today=${today}&days=${days}`);
   },
 
+  async translate(text: string): Promise<{ translation: string; alternatives: string[] }> {
+    return request(`/api/translate?text=${encodeURIComponent(text)}`);
+  },
+
   async syncPendingQueue(): Promise<number> {
     if (isDemoMode() || !navigator.onLine) return 0;
     const items = await getPendingMutations();

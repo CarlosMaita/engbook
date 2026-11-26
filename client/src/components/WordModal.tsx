@@ -1,5 +1,6 @@
-import { ExternalLink, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { ExternalLink, Languages, Loader2, X } from 'lucide-react';
+import { useEffect, useState, type FormEvent } from 'react';
+import { api } from '../lib/api';
 import type { Word } from '../types';
 
 interface WordModalProps {
@@ -20,7 +21,31 @@ export function WordModal({ initialWord, onClose, onSave }: WordModalProps) {
   const [example, setExample] = useState(initialWord?.example ?? '');
   const [notes, setNotes] = useState(initialWord?.notes ?? '');
   const [saving, setSaving] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleAutoTranslate = async (sourceTerm = term) => {
+    const cleaned = sourceTerm.trim();
+    if (!cleaned) return;
+    setTranslating(true);
+    try {
+      const res = await api.translate(cleaned);
+      if (res.translation) {
+        setTranslation(res.translation);
+      }
+    } catch {
+      // ignore silently
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isInbox && initialWord?.term && !initialWord.translation) {
+      handleAutoTranslate(initialWord.term);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -112,9 +137,26 @@ export function WordModal({ initialWord, onClose, onSave }: WordModalProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">
-              Traducción / Significado (Español) *
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-medium text-slate-300">
+                Traducción / Significado (Español) *
+              </label>
+              {term.trim() && (
+                <button
+                  type="button"
+                  disabled={translating}
+                  onClick={() => handleAutoTranslate()}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-400 hover:text-amber-300 disabled:opacity-50"
+                >
+                  {translating ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Languages className="w-3 h-3" />
+                  )}
+                  {translating ? 'Traduciendo...' : 'Traducir ahora'}
+                </button>
+              )}
+            </div>
             <input
               type="text"
               autoFocus={isInbox}

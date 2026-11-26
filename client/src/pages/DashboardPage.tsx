@@ -17,7 +17,7 @@ interface DashboardPageProps {
   loading: boolean;
   onOpenAddWord: () => void;
   onStartReview: () => void;
-  onQuickCapture: (term: string, source: string) => Promise<void>;
+  onQuickCapture: (term: string, source: string, translation?: string) => Promise<void>;
   onOpenInbox: () => void;
 }
 

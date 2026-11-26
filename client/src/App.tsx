@@ -59,10 +59,14 @@ function AuthenticatedApp() {
     await loadAll();
   };
 
-  const handleQuickCapture = async (term: string, source: string) => {
+  const handleQuickCapture = async (
+    term: string,
+    source: string,
+    translation = ''
+  ) => {
     await api.createWord({
       term,
-      translation: '',
+      translation,
       example: '',
       notes: source,
     });
